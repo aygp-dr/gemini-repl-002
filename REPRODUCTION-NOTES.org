@@ -1,0 +1,76 @@
+#+TITLE: REPRODUCTION-NOTES.org - Learnings from Gemini REPL Rebuild
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+#+STARTUP: overview
+
+* Overview
+
+This document tracks learnings, sequencing issues, and improvements discovered during the reproduction of the Gemini REPL project from GEMINI-REPL-PROMPTS.org. This is separate from the prompts under test.
+
+* Phase 1: Repository Foundation
+**Status**: ✅ Completed
+**Key Learnings**:
+- Git notes are essential for tracking prompts used
+- Use --trailer format for co-author attribution
+- FreeBSD requires gmake instead of make
+
+* Phase 2: SETUP.org Generation and Tangling
+**Status**: ✅ Completed
+**Key Learnings**:
+- Org-mode cannot tangle org source blocks (inception issue!)
+- Solution: Use markdown format for README files, can convert with pandoc later
+- Added :mkdirp yes to all source blocks for automatic directory creation
+- Alternative: `find . -name 'README.md' -exec pandoc -f markdown -t org -o {}.org {} \;`
+
+* Phase 3: SHARED-SETUP.org Infrastructure
+**Status**: ⏳ Pending
+**Expected**:
+- Creates .claude/commands/ directory structure
+- Adds Claude command definitions
+- Sets up change-requests/, experiments/, research/ workflows
+
+* Phase 4: NODE-SETUP.org Development Environment
+**Status**: ⏳ Pending
+**Expected**:
+- Creates package.json with Shadow-CLJS dependencies
+- Creates shadow-cljs.edn configuration
+- Implements initial ClojureScript REPL in src/gemini_repl/core.cljs
+
+* Sequencing Issues Discovered
+
+1. **Build scripts reference uninstalled dependencies**
+   - scripts/build.sh calls `npx shadow-cljs` before NODE-SETUP.org runs
+   - Not a blocker, just means scripts can't run until Phase 4
+
+2. **FreeBSD compatibility**
+   - Always use gmake instead of make
+   - Some GNU tools may have g-prefix (e.g., ggrep vs grep)
+
+3. **Missing formal tools**
+   - tla2tools.jar and alloy.jar need manual download
+   - Not created by tangling, only referenced
+
+* Environment Baseline
+
+**Working as of Phase 2**:
+- Git repository with hooks
+- Complete directory structure
+- Environment configuration
+- gmake for specs
+- npm v10.9.2 available
+- Java available
+
+**Waiting on future phases**:
+- package.json
+- shadow-cljs.edn
+- ClojureScript source
+- Claude commands
+- Formal verification tools
+
+* Improvements for Next Reproduction
+
+1. Consider consolidating SETUP.org files into one comprehensive setup
+2. Use markdown for all tangled documentation files
+3. Add explicit gmake usage in all Makefiles for BSD compatibility
+4. Create a bootstrap script that checks prerequisites
+5. Add phase verification commands at end of each phase
