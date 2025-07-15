@@ -1,0 +1,89 @@
+#+TITLE: CR-002-Conversation-Context
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+
+* Problem Statement
+
+Each prompt is sent to the Gemini API in isolation, making follow-up questions fail. Pronouns like "that", "it", and "this" don't resolve, and the AI has no memory of previous interactions.
+
+* Example Failures
+
+#+BEGIN_EXAMPLE
+gemini> What is ClojureScript?
+[Response about ClojureScript]
+
+gemini> How is it different from Clojure?
+Error: The AI doesn't know what "it" refers to
+#+END_EXAMPLE
+
+* Proposed Solution
+
+Implement conversation history tracking:
+1. Store all user/model messages in order
+2. Send full history with each API request
+3. Add /context command to view history
+4. Update /clear to reset history
+
+* Implementation Plan
+
+1. Add conversation-history atom
+2. Modify make-request to:
+   - Add user message to history before sending
+   - Include full history in API request
+   - Add model response to history after receiving
+3. Implement /context command
+4. Update /clear command
+
+* Testing Approach
+
+- [ ] Unit test for history management
+- [ ] Test pronoun resolution
+- [ ] Test multi-turn conversations
+- [ ] Verify /context display
+- [ ] Test /clear functionality
+- [ ] Check memory usage with long conversations
+
+* Success Criteria
+
+- [ ] Follow-up questions work correctly
+- [ ] Pronouns resolve properly
+- [ ] Context maintained across turns
+- [ ] /context shows full history
+- [ ] /clear resets conversation
+
+* Technical Details
+
+** Message Format
+#+BEGIN_SRC clojure
+{:role "user"    ; or "model"
+ :parts [{:text "message content"}]}
+#+END_SRC
+
+** API Request Structure
+#+BEGIN_SRC clojure
+{:contents [msg1, msg2, msg3, ...]}  ; Full history
+#+END_SRC
+
+** State Management
+#+BEGIN_SRC clojure
+(def conversation-history (atom []))
+
+; Add message
+(swap! conversation-history conj message)
+
+; Clear history
+(reset! conversation-history [])
+#+END_SRC
+
+* Future Enhancements
+
+1. Sliding window for token management
+2. Conversation persistence
+3. Smart context pruning
+4. Pattern analysis for self-optimization
+
+* References
+
+- Gemini API documentation on multi-turn conversations
+- ClojureScript atom documentation
+- Memory management best practices
