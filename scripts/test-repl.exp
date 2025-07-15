@@ -1,0 +1,21 @@
+#!/usr/bin/expect -f
+# Expect script for testing REPL interactions
+set timeout 10
+
+spawn node target/main.js
+
+expect "gemini>"
+send "/help\r"
+
+expect "Available commands:"
+expect "gemini>"
+send "/stats\r"
+
+expect "Usage Statistics:"
+expect "gemini>"
+send "/exit\r"
+
+expect "Goodbye!"
+expect eof
+
+puts "REPL test completed successfully"

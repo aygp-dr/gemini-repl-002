@@ -1,0 +1,24 @@
+{
+  "name": "gemini-repl",
+  "version": "0.1.0",
+  "description": "A simple REPL interface for Google's Gemini API",
+  "main": "target/main.js",
+  "scripts": {
+    "dev": "shadow-cljs watch app",
+    "build": "shadow-cljs compile app",
+    "test": "shadow-cljs compile test && node target/test.js",
+    "clean": "rm -rf target .shadow-cljs"
+  },
+  "dependencies": {
+    "shadow-cljs": "^2.27.1"
+  },
+  "devDependencies": {
+    "@cljs-oss/module-deps": "^1.1.1"
+  },
+  "author": "jwalsh + Claude",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jwalsh/gemini-repl.git"
+  }
+}

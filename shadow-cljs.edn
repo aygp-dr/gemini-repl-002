@@ -1,0 +1,17 @@
+{:source-paths ["src"]
+
+ :dependencies [[org.clojure/clojurescript "1.11.121"]
+                [com.cognitect/transit-cljs "0.8.280"]]
+
+ :builds
+ {:app
+  {:target :node-script
+   :main gemini-repl.core/main
+   :output-to "target/main.js"
+   :compiler-options {:infer-externs :auto}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.js"
+   :ns-regexp "-test$"
+   :compiler-options {:infer-externs :auto}}}}

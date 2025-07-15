@@ -1,0 +1,491 @@
+#+TITLE: NODE-SETUP.org - ClojureScript Development Environment
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+#+PROPERTY: header-args :mkdirp yes
+
+* ClojureScript Development Setup
+
+This file generates the complete ClojureScript development environment for the Gemini REPL.
+
+** Package Configuration
+
+Create package.json with Shadow-CLJS dependencies:
+
+#+BEGIN_SRC json :tangle package.json :mkdirp yes
+{
+  "name": "gemini-repl",
+  "version": "0.1.0",
+  "description": "A simple REPL interface for Google's Gemini API",
+  "main": "target/main.js",
+  "scripts": {
+    "dev": "shadow-cljs watch app",
+    "build": "shadow-cljs compile app",
+    "test": "shadow-cljs compile test && node target/test.js",
+    "clean": "rm -rf target .shadow-cljs"
+  },
+  "dependencies": {
+    "shadow-cljs": "^2.27.1"
+  },
+  "devDependencies": {
+    "@cljs-oss/module-deps": "^1.1.1"
+  },
+  "author": "jwalsh + Claude",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jwalsh/gemini-repl.git"
+  }
+}
+#+END_SRC
+
+** Shadow-CLJS Configuration
+
+Create shadow-cljs.edn configuration:
+
+#+BEGIN_SRC clojure :tangle shadow-cljs.edn :mkdirp yes
+{:source-paths ["src"]
+
+ :dependencies [[org.clojure/clojurescript "1.11.121"]
+                [com.cognitect/transit-cljs "0.8.280"]]
+
+ :builds
+ {:app
+  {:target :node-script
+   :main gemini-repl.core/main
+   :output-to "target/main.js"
+   :compiler-options {:infer-externs :auto}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.js"
+   :ns-regexp "-test$"
+   :compiler-options {:infer-externs :auto}}}}
+#+END_SRC
+
+** Core Implementation
+
+Create the main ClojureScript REPL implementation:
+
+#+BEGIN_SRC clojure :tangle src/gemini_repl/core.cljs :mkdirp yes
+(ns gemini-repl.core
+  (:require [clojure.string :as str]
+            ["fs" :as fs]
+            ["path" :as path]
+            ["readline" :as readline]
+            ["https" :as https]))
+
+;; State management
+(def conversation-history (atom []))
+(def stats (atom {:total-tokens 0
+                  :total-cost 0.0
+                  :request-count 0}))
+
+;; Configuration
+(def config
+  {:api-key (or js/process.env.GEMINI_API_KEY "")
+   :api-url "generativelanguage.googleapis.com"
+   :model "gemini-pro"
+   :log-enabled (= js/process.env.GEMINI_LOG_ENABLED "true")
+   :log-file (or js/process.env.GEMINI_LOG_FILE "logs/gemini-repl.log")
+   :log-fifo (or js/process.env.GEMINI_LOG_FIFO "/tmp/gemini-repl.fifo")})
+
+;; Logging functions
+(defn log-to-fifo [entry]
+  (when (:log-enabled config)
+    (try
+      (fs/appendFileSync (:log-fifo config)
+                         (str (.stringify js/JSON (clj->js entry)) "\n"))
+      (catch js/Error _e
+        ;; Silently ignore FIFO errors
+        nil))))
+
+(defn log-to-file [entry]
+  (when (:log-enabled config)
+    (let [log-dir (path/dirname (:log-file config))]
+      (when-not (fs/existsSync log-dir)
+        (fs/mkdirSync log-dir #js {:recursive true}))
+      (fs/appendFileSync (:log-file config)
+                         (str (.stringify js/JSON (clj->js entry)) "\n")))))
+
+(defn log-entry [type data]
+  (let [entry {:timestamp (.toISOString (js/Date.))
+               :type type
+               :data data}]
+    (log-to-fifo entry)
+    (log-to-file entry)))
+
+;; Display banner
+(defn display-banner []
+  (try
+    (let [banner-path "resources/repl-banner.txt"]
+      (if (fs/existsSync banner-path)
+        (println (fs/readFileSync banner-path "utf8"))
+        (println "=== Gemini REPL ===")))
+    (catch js/Error _e
+      (println "=== Gemini REPL ===")))
+  (println "Type /help for commands or your message to chat")
+  (println))
+
+;; Format response metadata
+(defn format-metadata [response-data duration-ms]
+  (let [tokens (or (get-in response-data [:usageMetadata :totalTokenCount]) 0)
+        cost (* tokens 0.0000005) ;; Rough estimate
+        duration (if (< duration-ms 1000)
+                   (str duration-ms "ms")
+                   (str (.toFixed (/ duration-ms 1000) 1) "s"))
+        confidence (cond
+                     (< tokens 100) "🟢"
+                     (< tokens 500) "🟡"
+                     :else "🔴")]
+    (str "[" confidence " " tokens " tokens | $" (.toFixed cost 4) " | " duration "]")))
+
+;; API request handling
+(defn make-request [prompt callback]
+  (let [start-time (.now js/Date)
+        api-key (:api-key config)
+        messages (conj @conversation-history
+                       {:role "user" :parts [{:text prompt}]})
+        request-data {:contents messages}]
+
+    ;; Update conversation history
+    (swap! conversation-history conj {:role "user" :parts [{:text prompt}]})
+
+    ;; Log request
+    (log-entry "request" {:prompt prompt :history-length (count messages)})
+
+    (let [data (.stringify js/JSON (clj->js request-data))
+          options #js {:hostname (:api-url config)
+                       :path (str "/v1beta/models/" (:model config) ":generateContent?key=" api-key)
+                       :method "POST"
+                       :headers #js {"Content-Type" "application/json"
+                                     "Content-Length" (.-length data)}}]
+
+      (let [req (.request https options
+                          (fn [res]
+                            (let [chunks (atom [])]
+                              (.on res "data" (fn [chunk]
+                                                (swap! chunks conj chunk)))
+                              (.on res "end" (fn []
+                                               (try
+                                                 (let [body (.toString (.concat js/Buffer (clj->js @chunks)))
+                                                       response-data (js->clj (.parse js/JSON body) :keywordize-keys true)
+                                                       duration-ms (- (.now js/Date) start-time)]
+
+                                                   (log-entry "response" {:status (.-statusCode res)
+                                                                          :duration-ms duration-ms
+                                                                          :tokens (get-in response-data [:usageMetadata :totalTokenCount])})
+
+                                                   (if (= (.-statusCode res) 200)
+                                                     (let [content (get-in response-data [:candidates 0 :content :parts 0 :text])
+                                                           metadata (format-metadata response-data duration-ms)]
+                                                       ;; Update conversation history with response
+                                                       (swap! conversation-history conj {:role "model" :parts [{:text content}]})
+                                                       ;; Update stats
+                                                       (swap! stats update :total-tokens + (or (get-in response-data [:usageMetadata :totalTokenCount]) 0))
+                                                       (swap! stats update :total-cost + (* (or (get-in response-data [:usageMetadata :totalTokenCount]) 0) 0.0000005))
+                                                       (swap! stats update :request-count inc)
+                                                       (callback nil {:content content :metadata metadata}))
+                                                     (callback (str "API Error: " (.-statusCode res) " - " body) nil)))
+                                                 (catch js/Error e
+                                                   (callback (str "Error parsing response: " (.-message e)) nil))))))))]
+        (.on req "error" (fn [e]
+                           (log-entry "error" {:message (.-message e)})
+                           (callback (str "Request error: " (.-message e)) nil)))
+        (.write req data)
+        (.end req)))))
+
+;; Command handlers
+(defn handle-help []
+  (println "\nAvailable commands:")
+  (println "  /help    - Show this help message")
+  (println "  /exit    - Exit the REPL")
+  (println "  /clear   - Clear conversation history")
+  (println "  /stats   - Show usage statistics")
+  (println "  /context - Show current conversation")
+  (println "  /debug   - Toggle debug logging")
+  (println "\nType anything else to chat with Gemini"))
+
+(defn handle-stats []
+  (println "\nUsage Statistics:")
+  (println (str "  Total requests: " (:request-count @stats)))
+  (println (str "  Total tokens: " (:total-tokens @stats)))
+  (println (str "  Estimated cost: $" (.toFixed (:total-cost @stats) 4))))
+
+(defn handle-context []
+  (println "\nConversation History:")
+  (doseq [[idx msg] (map-indexed vector @conversation-history)]
+    (println (str (inc idx) ". [" (:role msg) "] "
+                  (-> msg :parts first :text (subs 0 (min 50 (count (-> msg :parts first :text)))))
+                  (when (> (count (-> msg :parts first :text)) 50) "...")))))
+
+(defn handle-debug []
+  (let [new-state (not (:log-enabled config))]
+    (set! config (assoc config :log-enabled new-state))
+    (println (str "\nDebug logging " (if new-state "enabled" "disabled")))))
+
+(defn handle-clear []
+  (reset! conversation-history [])
+  (println "\nConversation history cleared"))
+
+;; Main REPL loop
+(defn process-input [input rl]
+  (cond
+    (= input "/exit") (.close rl)
+    (= input "/help") (do (handle-help) (.prompt rl))
+    (= input "/clear") (do (handle-clear) (.prompt rl))
+    (= input "/stats") (do (handle-stats) (.prompt rl))
+    (= input "/context") (do (handle-context) (.prompt rl))
+    (= input "/debug") (do (handle-debug) (.prompt rl))
+    (str/blank? input) (.prompt rl)
+    :else
+    (do
+      (make-request input
+                    (fn [err response]
+                      (if err
+                        (println (str "\nError: " err))
+                        (do
+                          (println (str "\n" (:content response)))
+                          (println (:metadata response))))
+                      (println)
+                      (.prompt rl))))))
+
+(defn main []
+  (display-banner)
+
+  (when (str/blank? (:api-key config))
+    (println "Warning: GEMINI_API_KEY not set in environment")
+    (println "Set it in your .env file or export GEMINI_API_KEY=your-key-here")
+    (println))
+
+  (let [rl (.createInterface readline
+                             #js {:input js/process.stdin
+                                  :output js/process.stdout
+                                  :prompt "gemini> "})]
+    (.prompt rl)
+    (.on rl "line" (fn [input]
+                     (process-input (str/trim input) rl)))
+    (.on rl "close" (fn []
+                      (println "\nGoodbye!")
+                      (.exit js/process 0)))))
+
+;; Enable main function call
+(set! *main-cli-fn* main)
+#+END_SRC
+
+** Test Infrastructure
+
+Create basic test structure:
+
+#+BEGIN_SRC clojure :tangle test/gemini_repl/core_test.cljs :mkdirp yes
+(ns gemini-repl.core-test
+  (:require [cljs.test :refer-macros [deftest is testing]]
+            [gemini-repl.core :as core]))
+
+(deftest test-format-metadata
+  (testing "Format metadata with short duration"
+    (let [response-data {:usageMetadata {:totalTokenCount 100}}
+          result (core/format-metadata response-data 500)]
+      (is (re-find #"🟢" result))
+      (is (re-find #"100 tokens" result))
+      (is (re-find #"500ms" result))))
+
+  (testing "Format metadata with long duration"
+    (let [response-data {:usageMetadata {:totalTokenCount 600}}
+          result (core/format-metadata response-data 2500)]
+      (is (re-find #"🔴" result))
+      (is (re-find #"600 tokens" result))
+      (is (re-find #"2.5s" result)))))
+
+(deftest test-conversation-history
+  (testing "Conversation history management"
+    (reset! core/conversation-history [])
+    (is (= 0 (count @core/conversation-history)))
+
+    ;; Simulate adding a message
+    (swap! core/conversation-history conj {:role "user" :parts [{:text "Hello"}]})
+    (is (= 1 (count @core/conversation-history)))
+    (is (= "user" (:role (first @core/conversation-history))))))
+
+(deftest test-stats-tracking
+  (testing "Statistics tracking"
+    (reset! core/stats {:total-tokens 0 :total-cost 0.0 :request-count 0})
+
+    ;; Simulate updating stats
+    (swap! core/stats update :total-tokens + 100)
+    (swap! core/stats update :request-count inc)
+
+    (is (= 100 (:total-tokens @core/stats)))
+    (is (= 1 (:request-count @core/stats)))))
+#+END_SRC
+
+** Development Scripts Enhancement
+
+Create additional development helper scripts:
+
+#+BEGIN_SRC sh :tangle scripts/setup-dev.sh :shebang #!/bin/sh :mkdirp yes
+# Development environment setup
+set -e
+
+echo "Setting up Gemini REPL development environment..."
+
+# Check for Node.js
+if ! command -v node >/dev/null 2>&1; then
+    echo "Error: Node.js is required but not installed"
+    exit 1
+fi
+
+# Check for npm
+if ! command -v npm >/dev/null 2>&1; then
+    echo "Error: npm is required but not installed"
+    exit 1
+fi
+
+# Install dependencies
+echo "Installing dependencies..."
+npm install
+
+# Create necessary directories
+echo "Creating directories..."
+mkdir -p logs
+mkdir -p resources
+mkdir -p target
+
+# Check for .env file
+if [ ! -f .env ]; then
+    echo "Creating .env from template..."
+    cp .env.example .env
+    echo "Please edit .env and add your GEMINI_API_KEY"
+fi
+
+# Generate banner if it doesn't exist
+if [ ! -f resources/repl-banner.txt ]; then
+    echo "Generating banner..."
+    if command -v toilet >/dev/null 2>&1; then
+        toilet -f future "Gemini REPL" > resources/repl-banner.txt
+    else
+        echo "=== Gemini REPL ===" > resources/repl-banner.txt
+    fi
+fi
+
+echo "Development environment ready!"
+echo "Run 'gmake dev' to start development server"
+#+END_SRC
+
+#+BEGIN_SRC sh :tangle scripts/test-repl.exp :shebang #!/usr/bin/expect -f :mkdirp yes
+# Expect script for testing REPL interactions
+set timeout 10
+
+spawn node target/main.js
+
+expect "gemini>"
+send "/help\r"
+
+expect "Available commands:"
+expect "gemini>"
+send "/stats\r"
+
+expect "Usage Statistics:"
+expect "gemini>"
+send "/exit\r"
+
+expect "Goodbye!"
+expect eof
+
+puts "REPL test completed successfully"
+#+END_SRC
+
+** Makefile Updates
+
+Create comprehensive Makefile:
+
+#+BEGIN_SRC makefile :tangle Makefile :mkdirp yes
+# Makefile for Gemini REPL
+.PHONY: help install build dev run test lint clean setup all
+
+# Default target
+all: install build
+
+help:
+	@echo "Gemini REPL - Available targets:"
+	@echo "  make install  - Install npm dependencies"
+	@echo "  make build    - Build the application"
+	@echo "  make dev      - Run in development mode with live reload"
+	@echo "  make run      - Run the compiled REPL"
+	@echo "  make test     - Run all tests"
+	@echo "  make lint     - Run linter"
+	@echo "  make clean    - Clean build artifacts"
+	@echo "  make setup    - Complete development setup"
+
+install:
+	npm install
+
+build: resources/repl-banner.txt
+	npx shadow-cljs compile app
+
+dev:
+	GEMINI_LOG_ENABLED=true npx nodemon --watch src --watch target -e cljs,js --exec "npx shadow-cljs compile app && node target/main.js"
+
+run: build
+	node target/main.js
+
+test:
+	npx shadow-cljs compile test && node target/test.js
+
+lint:
+	@if command -v clj-kondo >/dev/null 2>&1; then \
+		npx clj-kondo --lint src test; \
+	else \
+		echo "clj-kondo not installed, skipping lint"; \
+	fi
+
+clean:
+	rm -rf target .shadow-cljs node_modules
+
+setup: install
+	./scripts/setup-dev.sh
+
+# Create banner resource
+resources/repl-banner.txt: | resources
+	@if command -v toilet >/dev/null 2>&1; then \
+		toilet -f future "Gemini REPL" > $@; \
+	else \
+		echo "=== Gemini REPL ===" > $@; \
+	fi
+
+resources:
+	mkdir -p resources
+
+# Watch for changes
+watch:
+	npx shadow-cljs watch app
+
+# REPL for development
+repl:
+	npx shadow-cljs cljs-repl app
+#+END_SRC
+
+** Environment Template Update
+
+Update .env.example with all options:
+
+#+BEGIN_SRC sh :tangle .env.example :mkdirp yes
+# Gemini API Configuration
+GEMINI_API_KEY=your-api-key-here
+
+# Logging Configuration (all commented out for default behavior)
+# GEMINI_LOG_ENABLED=true
+# GEMINI_LOG_FILE=logs/gemini-repl.log
+# GEMINI_LOG_FIFO=/tmp/gemini-repl.fifo
+
+# API Configuration (optional)
+# GEMINI_MODEL=gemini-pro
+# GEMINI_API_URL=generativelanguage.googleapis.com
+#+END_SRC
+
+* Extraction Instructions
+
+To extract all files from this document:
+1. Run `emacs --batch -l org NODE-SETUP.org -f org-babel-tangle`
+2. Make scripts executable: `chmod +x scripts/*.sh`
+3. Run `npm install` to install dependencies
+4. Remove this file after successful extraction
