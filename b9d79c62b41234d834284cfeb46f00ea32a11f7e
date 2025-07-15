@@ -1,0 +1,25 @@
+Phase 11: Conversation Context Implementation
+
+Problem context:
+- Each prompt currently sent in isolation
+- Follow-up questions fail
+- Pronouns like 'that', 'it' don't resolve
+
+Prompt used (cleaned for clarity):
+'OK, smallest possible change to implement that then run through some simple tests'
+- Add conversation-history atom to track messages
+- Modify make-request to include full conversation history
+- Add user messages to history before sending
+- Add model responses to history after receiving
+- Add /context command to display current conversation
+
+Implementation Notes:
+- Conversation history already implemented in core.cljs
+- Created comprehensive documentation
+- Added tests for conversation management
+- This enables multi-turn dialogues
+- Forms foundation for memetic evolution
+- More trailing whitespace battles (11 lines in test file\!)
+
+Key insight: This feature is critical for the self-modification vision -
+the REPL can learn from conversation patterns\!
