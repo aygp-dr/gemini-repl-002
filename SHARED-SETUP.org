@@ -1,0 +1,561 @@
+#+TITLE: SHARED-SETUP.org - Claude Command Infrastructure
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+#+PROPERTY: header-args :mkdirp yes
+
+* Claude Command Infrastructure
+
+This file creates the Claude command system and additional project directories for change requests, experiments, and research workflows.
+
+** Claude Commands Directory
+
+Create the Claude commands structure:
+
+#+BEGIN_SRC markdown :tangle .claude/commands/README.md :mkdirp yes
+# Claude Commands
+
+This directory contains command definitions for Claude Code to help with common development tasks.
+
+## Available Commands
+
+- `analyze.md` - Code analysis and review
+- `create-cr.md` - Create change requests
+- `experiment.md` - Set up experiments
+- `github.md` - GitHub integration helpers
+- `implement.md` - Implementation workflow
+- `mise-en-place.md` - Project setup and preparation
+- `research.md` - Research documentation
+- `spec-check.md` - Formal specification verification
+
+## Usage
+
+Reference these commands when working with Claude Code to maintain consistent workflows.
+#+END_SRC
+
+** Code Analysis Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/analyze.md :mkdirp yes
+# Code Analysis Command
+
+Analyzes code structure and provides insights about the Gemini REPL implementation.
+
+## Usage
+
+When asked to analyze code:
+
+1. **Examine ClojureScript structure**
+   - Review namespace organization
+   - Check for idiomatic ClojureScript patterns
+   - Identify potential performance issues
+
+2. **Check formal specifications**
+   - Verify implementation matches TLA+ specs
+   - Ensure Alloy models are satisfied
+
+3. **Review API integration**
+   - Validate Gemini API usage
+   - Check error handling
+   - Review rate limiting implementation
+
+4. **Provide recommendations**
+   - Suggest improvements
+   - Identify missing tests
+   - Recommend refactoring opportunities
+#+END_SRC
+
+** Create Change Request Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/create-cr.md :mkdirp yes
+# Create Change Request Command
+
+Creates structured change requests for the Gemini REPL project.
+
+## Template
+
+```org
+#+TITLE: CR-[NUMBER]-[SHORT-TITLE]
+#+AUTHOR: [Author]
+#+DATE: [Date]
+
+* Problem Statement
+
+[Describe the issue or enhancement]
+
+* Proposed Solution
+
+[Detailed solution approach]
+
+* Implementation Plan
+
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+* Testing Approach
+
+- [ ] Unit tests
+- [ ] Integration tests
+- [ ] Formal verification
+
+* Success Criteria
+
+[How we know it's working]
+```
+
+## Process
+
+1. Create file in `change-requests/CR-XXX-title.org`
+2. Fill out all sections
+3. Reference relevant specifications
+4. Link to related issues
+#+END_SRC
+
+** Experiment Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/experiment.md :mkdirp yes
+# Experiment Command
+
+Sets up experimental branches for testing new ideas.
+
+## Process
+
+1. **Create experiment directory**
+   ```bash
+   mkdir -p experiments/EXP-XXX-description
+   ```
+
+2. **Document goals**
+   - What are we testing?
+   - What's the hypothesis?
+   - Success metrics?
+
+3. **Implement prototype**
+   - Keep code isolated
+   - Use minimal dependencies
+   - Focus on core concept
+
+4. **Document results**
+   - What worked?
+   - What didn't?
+   - Should it be integrated?
+
+## Example Structure
+
+```
+experiments/
+└── EXP-001-streaming-responses/
+    ├── README.md
+    ├── prototype.cljs
+    └── results.md
+```
+#+END_SRC
+
+** GitHub Integration Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/github.md :mkdirp yes
+# GitHub Integration Command
+
+Helpers for GitHub workflows and CI/CD.
+
+## Available Actions
+
+### Create Issue
+```bash
+gh issue create --title "Title" --body "Description"
+```
+
+### Create PR
+```bash
+gh pr create --title "Title" --body "Description"
+```
+
+### Run Workflow
+```bash
+gh workflow run formal-verification.yml
+```
+
+## CI/CD Triggers
+
+- Push to main: Run all tests
+- PR opened: Run linting and tests
+- Tag created: Build release
+- Manual: Formal verification
+
+## Labels
+
+- `bug` - Something isn't working
+- `enhancement` - New feature
+- `formal-methods` - Related to TLA+/Alloy
+- `clojurescript` - Implementation related
+#+END_SRC
+
+** Implementation Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/implement.md :mkdirp yes
+# Implementation Command
+
+Structured approach to implementing features in the Gemini REPL.
+
+## Workflow
+
+1. **Read specification**
+   - Check TLA+ spec in `specs/`
+   - Review Alloy models
+   - Understand requirements
+
+2. **Write tests first**
+   - Create test file
+   - Define expected behavior
+   - Run tests (they should fail)
+
+3. **Implement feature**
+   - Write ClojureScript code
+   - Follow project conventions
+   - Keep functions small
+
+4. **Verify implementation**
+   - Run tests
+   - Check formal specs
+   - Test manually
+
+5. **Document changes**
+   - Update relevant docs
+   - Add inline comments
+   - Update README if needed
+
+## Code Style
+
+- Use meaningful names
+- Prefer pure functions
+- Handle errors explicitly
+- Add type hints where helpful
+#+END_SRC
+
+** Mise en Place Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/mise-en-place.md :mkdirp yes
+# Mise en Place Command
+
+"Everything in its place" - Preparation before starting work.
+
+## Checklist
+
+### Environment Setup
+- [ ] `.env` file exists with API key
+- [ ] Dependencies installed (`npm install`)
+- [ ] Shadow-CLJS running (`gmake dev`)
+- [ ] Logs directory created
+
+### Verification
+- [ ] Run `gmake lint` - no errors
+- [ ] Run `gmake test` - all passing
+- [ ] Check `git status` - clean working tree
+
+### Formal Methods
+- [ ] TLA+ tools available
+- [ ] Alloy analyzer ready
+- [ ] Specs up to date
+
+### Development Tools
+- [ ] REPL connected
+- [ ] Editor configured
+- [ ] Terminal ready
+
+## Quick Start
+
+```bash
+# Full setup
+gmake install
+cp .env.example .env
+# Edit .env with API key
+gmake dev
+```
+#+END_SRC
+
+** Research Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/research.md :mkdirp yes
+# Research Command
+
+Documents research findings and explorations.
+
+## Format
+
+Create files in `research/` with structure:
+
+```org
+#+TITLE: RES-XXX-Topic
+#+DATE: [Date]
+
+* Question/Topic
+
+[What we're investigating]
+
+* Background
+
+[Context and prior art]
+
+* Findings
+
+[What we discovered]
+
+* Conclusions
+
+[Implications for the project]
+
+* References
+
+[Links and citations]
+```
+
+## Topics
+
+- Gemini API capabilities
+- ClojureScript patterns
+- Formal verification techniques
+- REPL design patterns
+- Performance optimizations
+#+END_SRC
+
+** Specification Check Command
+
+#+BEGIN_SRC markdown :tangle .claude/commands/spec-check.md :mkdirp yes
+# Specification Check Command
+
+Verifies implementation against formal specifications.
+
+## TLA+ Verification
+
+```bash
+cd specs
+java -jar ../tools/formal-methods/tla2tools.jar commands.tla
+```
+
+## Alloy Verification
+
+```bash
+cd specs
+java -jar ../tools/formal-methods/alloy.jar state.alloy
+```
+
+## Checklist
+
+### Before Implementation
+- [ ] Spec exists for feature
+- [ ] Spec has been model-checked
+- [ ] Edge cases identified
+
+### After Implementation
+- [ ] Code matches spec behavior
+- [ ] All invariants maintained
+- [ ] Properties verified
+
+## Common Properties
+
+1. **Safety**: Nothing bad happens
+   - No invalid states
+   - Invariants preserved
+
+2. **Liveness**: Good things happen
+   - Progress guaranteed
+   - Responses generated
+
+3. **Fairness**: All paths possible
+   - No starvation
+   - Equal opportunity
+#+END_SRC
+
+** Additional Project Directories
+
+Create README files for the enhanced workflow directories:
+
+#+BEGIN_SRC markdown :tangle change-requests/TEMPLATE.md :mkdirp yes
+# Change Request Template
+
+Use this template when creating new change requests.
+
+```org
+#+TITLE: CR-XXX-Short-Description
+#+AUTHOR: Your Name
+#+DATE: YYYY-MM-DD
+
+* Problem Statement
+
+[Clear description of the issue or enhancement]
+
+* Current Behavior
+
+[How it works now, if applicable]
+
+* Proposed Solution
+
+[Detailed solution approach]
+
+* Implementation Plan
+
+1. [Concrete step 1]
+2. [Concrete step 2]
+3. [Concrete step 3]
+
+* Testing Approach
+
+- [ ] Unit tests for [component]
+- [ ] Integration test for [workflow]
+- [ ] Manual testing of [feature]
+- [ ] Formal verification of [property]
+
+* Success Criteria
+
+- [ ] [Measurable outcome 1]
+- [ ] [Measurable outcome 2]
+- [ ] [Measurable outcome 3]
+
+* References
+
+- Issue #XXX
+- Specification: specs/[relevant].tla
+- Related CRs: CR-YYY
+```
+#+END_SRC
+
+#+BEGIN_SRC markdown :tangle experiments/TEMPLATE.md :mkdirp yes
+# Experiment Template
+
+Use this template for new experiments.
+
+```markdown
+# EXP-XXX-Short-Description
+
+**Date Started**: YYYY-MM-DD
+**Status**: [In Progress|Complete|Abandoned]
+
+## Hypothesis
+
+[What we think will happen]
+
+## Goals
+
+1. [Specific goal 1]
+2. [Specific goal 2]
+
+## Method
+
+[How we'll test the hypothesis]
+
+## Implementation
+
+[Code location and approach]
+
+## Results
+
+### What Worked
+- [Success 1]
+- [Success 2]
+
+### What Didn't Work
+- [Challenge 1]
+- [Challenge 2]
+
+## Conclusions
+
+[Should this be integrated into main project?]
+
+## Next Steps
+
+[If continuing, what's next?]
+```
+#+END_SRC
+
+#+BEGIN_SRC markdown :tangle research/TEMPLATE.md :mkdirp yes
+# Research Template
+
+Use this template for research documentation.
+
+```org
+#+TITLE: RES-XXX-Research-Topic
+#+AUTHOR: Your Name
+#+DATE: YYYY-MM-DD
+
+* Research Question
+
+[What are we trying to understand?]
+
+* Background
+
+[Context and why this matters]
+
+* Method
+
+[How we'll investigate]
+
+* Findings
+
+** Finding 1
+[Details]
+
+** Finding 2
+[Details]
+
+* Analysis
+
+[What do the findings mean?]
+
+* Conclusions
+
+[How does this apply to our project?]
+
+* References
+
+1. [Source 1]
+2. [Source 2]
+
+* Further Questions
+
+- [ ] [Follow-up question 1]
+- [ ] [Follow-up question 2]
+```
+#+END_SRC
+
+** Git Pre-commit Hook Enhancement
+
+Update the git pre-commit hook to check for proper file naming:
+
+#+BEGIN_SRC sh :tangle scripts/check-naming.sh :shebang #!/bin/sh :mkdirp yes
+# Check file naming conventions
+
+set -e
+
+# Check change requests
+for file in change-requests/CR-*.org; do
+    if [ -f "$file" ]; then
+        base=$(basename "$file")
+        if ! echo "$base" | grep -qE '^CR-[0-9]{3}-[a-z-]+\.org$'; then
+            echo "✗ Invalid CR naming: $file"
+            echo "  Expected: CR-XXX-lowercase-description.org"
+            exit 1
+        fi
+    fi
+done
+
+# Check experiments
+for file in experiments/EXP-*/; do
+    if [ -d "$file" ]; then
+        base=$(basename "$file")
+        if ! echo "$base" | grep -qE '^EXP-[0-9]{3}-[a-z-]+$'; then
+            echo "✗ Invalid experiment naming: $file"
+            echo "  Expected: EXP-XXX-lowercase-description/"
+            exit 1
+        fi
+    fi
+done
+
+echo "✓ File naming conventions passed"
+#+END_SRC
+
+* Extraction Instructions
+
+To extract all files from this document:
+1. Run `emacs --batch -l org SHARED-SETUP.org -f org-babel-tangle`
+2. Make scripts executable: `chmod +x scripts/*.sh`
+3. Remove this file after successful extraction
+#+END_SRC
