@@ -1,0 +1,25 @@
+Phase 3: SHARED-SETUP.org Infrastructure
+
+Prompts used (cleaned for clarity):
+1. 'Create a SHARED-SETUP.org that creates directories for change-requests/, experiments/, and research/ as well as core commands for Claude'
+   - Purpose: Establish Claude command infrastructure and workflow directories
+
+2. 'Read and tangle the following file: SHARED-SETUP.org'
+   - Purpose: Extract Claude commands and templates from org-mode source
+
+Context from original development:
+- User showed existing defrecord commands as examples
+- Adapted command patterns for Gemini REPL's ClojureScript/formal-methods context
+- Created 8 Claude command definitions
+- Added templates for structured workflows
+
+Implementation Notes:
+- Some files didn't tangle properly (org-babel missed some blocks)
+- Manually created missing files to ensure completeness
+- Kept SHARED-SETUP.org for v003 (goal: ship only org files that fully tangle)
+- Pre-commit hook caught multiple missing trailing newlines (echo >> to the rescue\!)
+
+Files created:
+- .claude/commands/ with 8 command markdown files
+- Templates for change-requests, experiments, and research
+- check-naming.sh script for enforcing naming conventions
