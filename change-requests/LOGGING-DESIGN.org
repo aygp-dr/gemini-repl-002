@@ -1,0 +1,72 @@
+#+TITLE: LOGGING-DESIGN
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+
+* Problem Statement
+
+Need comprehensive logging for debugging and monitoring the Gemini REPL, including:
+- API request/response tracking
+- Error logging
+- Performance metrics
+- User interaction history
+
+* Proposed Solution
+
+Implement dual logging system:
+1. FIFO logging for real-time monitoring
+2. File logging for persistent storage
+
+* Implementation Plan
+
+** 1. FIFO Logging
+- Write to =/tmp/gemini-repl.fifo=
+- JSON-formatted entries
+- Non-blocking writes
+- Graceful handling if FIFO doesn't exist
+
+** 2. File Logging
+- Write to =logs/gemini-repl.log=
+- Automatic directory creation
+- Log rotation (future enhancement)
+- Same JSON format as FIFO
+
+** 3. Configuration
+- =GEMINI_LOG_ENABLED= - Enable/disable logging
+- =GEMINI_LOG_FILE= - File path (default: logs/gemini-repl.log)
+- =GEMINI_LOG_FIFO= - FIFO path (default: /tmp/gemini-repl.fifo)
+- =GEMINI_LOG_LEVEL= - Log level (debug/info/warn/error)
+
+** 4. Log Entry Format
+#+BEGIN_SRC json
+{
+  "timestamp": "2025-07-15T10:30:00.000Z",
+  "type": "request|response|error|info",
+  "data": {
+    // Context-specific data
+  }
+}
+#+END_SRC
+
+* Testing Approach
+
+- [ ] Unit tests for log formatting
+- [ ] Integration test with FIFO reader
+- [ ] Verify file creation and permissions
+- [ ] Test log rotation (when implemented)
+- [ ] Performance impact measurement
+
+* Success Criteria
+
+- [ ] Logs written to both FIFO and file
+- [ ] No performance degradation
+- [ ] Logs are useful for debugging
+- [ ] Configuration works via environment variables
+- [ ] Graceful degradation if logging fails
+
+* Future Enhancements
+
+1. Log rotation based on size/time
+2. Log levels and filtering
+3. Structured log queries
+4. Remote logging support
+5. Metrics aggregation
