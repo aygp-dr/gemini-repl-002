@@ -23,11 +23,12 @@ This document tracks learnings, sequencing issues, and improvements discovered d
 - Alternative: `find . -name 'README.md' -exec pandoc -f markdown -t org -o {}.org {} \;`
 
 * Phase 3: SHARED-SETUP.org Infrastructure
-**Status**: ⏳ Pending
-**Expected**:
-- Creates .claude/commands/ directory structure
-- Adds Claude command definitions
-- Sets up change-requests/, experiments/, research/ workflows
+**Status**: ✅ Completed
+**Key Learnings**:
+- Some org-babel blocks don't tangle correctly (had to manually create 4 files)
+- Pre-commit hook is thorough about trailing newlines!
+- Keeping org files for v003 (goal: only ship org files that fully tangle)
+- Created 8 Claude commands and workflow templates successfully
 
 * Phase 4: NODE-SETUP.org Development Environment
 **Status**: ⏳ Pending
@@ -74,3 +75,25 @@ This document tracks learnings, sequencing issues, and improvements discovered d
 3. Add explicit gmake usage in all Makefiles for BSD compatibility
 4. Create a bootstrap script that checks prerequisites
 5. Add phase verification commands at end of each phase
+
+* Clarifications for Future Reproductions
+
+** Meta Context
+This is a build reproduction exercise. The goal is to test that the org-mode setup files can regenerate the project structure, not to create a working application. Focus on the tangling/generation process itself.
+
+** Success Criteria Per Phase
+- Success: All files extracted from org-mode correctly
+- Success: Directory structure matches expected layout
+- Success: Org files can fully self-extract without manual intervention
+- NOT: Application runs or connects to APIs
+
+** Iteration Goals
+- v002: Include both org files and tangled outputs
+- v003: Ship only org files that fully self-extract
+- v004: Further refinements based on v003 learnings
+
+** Explicit Non-Goals
+- Do not verify scripts actually run
+- Do not test API connectivity
+- Do not implement actual functionality
+- Focus solely on org-mode tangling completeness
