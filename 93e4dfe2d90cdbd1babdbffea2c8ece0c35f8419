@@ -1,0 +1,27 @@
+Phase 4: NODE-SETUP.org Development Environment
+
+Prompts used (cleaned for clarity):
+1. 'Read then tangle the following file: NODE-SETUP.org'
+   - Purpose: Extract ClojureScript development environment from org-mode
+
+2. 'npm install to install Shadow-CLJS dependencies'
+   - Purpose: Install Node.js dependencies (skipped for reproduction exercise)
+
+3. 'Remove NODE-SETUP.org after successful tangling'
+   - Purpose: Clean up after extraction (kept for v003)
+
+Implementation Notes:
+- Created complete ClojureScript REPL implementation in core.cljs
+- Added package.json, shadow-cljs.edn, and test infrastructure
+- Updated Makefile with comprehensive targets (using gmake compatible)
+- Created setup-dev.sh and test-repl.exp scripts
+- Massive trailing whitespace cleanup required (FreeBSD sed -i '')
+- Pre-commit hook continues to enforce newline discipline\!
+
+Files created:
+- package.json with Shadow-CLJS dependencies
+- shadow-cljs.edn for ClojureScript compilation
+- src/gemini_repl/core.cljs with full REPL implementation
+- test/gemini_repl/core_test.cljs with basic tests
+- Comprehensive Makefile replacing simple version
+- Development helper scripts
