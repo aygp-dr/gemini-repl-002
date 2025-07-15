@@ -1,0 +1,10 @@
+Deviation: Created REPRODUCTION-NOTES.org
+
+Purpose: Track learnings and sequencing issues discovered during reproduction
+- Separate from GEMINI-REPL-PROMPTS.org to preserve original prompts
+- Documents FreeBSD-specific requirements (gmake)
+- Records org-mode tangling inception issue and markdown solution
+- Tracks what's working vs waiting on future phases
+
+Implementation detail: Had to use 'echo >> file' to add trailing newline
+for pre-commit hook satisfaction - the simple solutions are often best\!
