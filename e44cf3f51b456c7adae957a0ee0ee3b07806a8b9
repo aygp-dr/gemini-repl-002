@@ -1,0 +1,25 @@
+Phase 7: Formal Specifications Implementation
+
+Context from original prompt:
+'Added missing files that should have been created by SPECS-SETUP.org tangling'
+
+What actually happened:
+1. Created spec files directly (not from tangling)
+2. THEN created SPECS-SETUP.org that SHOULD have generated them
+3. This represents the 'beautiful mess' of our reproduction
+
+Files created:
+- specs/commands.tla - Command processing specification
+- specs/interfaces.tla - API interface contracts
+- specs/api_client.tla - Client behavior specification
+- specs/gemini_api.tla - Gemini API interaction spec
+- specs/state.alloy - System state model
+- specs/gemini_api.alloy - API structure validation
+- Placeholder tool JARs (would need actual download)
+
+Implementation Notes:
+- Should have created SPECS-SETUP.org first, then tangled
+- Instead created files directly, then backported the org file
+- More trailing whitespace cleanup required
+- Pre-commit hook remains undefeated
+- This backwards approach documents what v003/v004 should avoid
