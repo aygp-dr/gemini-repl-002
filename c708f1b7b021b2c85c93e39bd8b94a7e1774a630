@@ -1,0 +1,30 @@
+Phase 5: GITHUB-SETUP.org Integration
+
+Prompts used (cleaned for clarity):
+1. 'Show GITHUB-SETUP.org' (just 3 words)
+   - Purpose: Review the GitHub integration setup file
+
+2. 'Same process: GITHUB-SETUP.org (Last - GitHub integration)'
+   - Purpose: Tangle GitHub infrastructure from org-mode
+
+Context from original development:
+- Building self-hosting Gemini REPL with formal specifications
+- GitHub-specific markdown in .github/rfcs/
+- CI/CD for TLA+/Alloy verification planned
+- Self-modification capabilities discussed
+
+Implementation Notes:
+- YAML files had extensive trailing whitespace issues
+- Created complete GitHub Actions workflow suite
+- Added issue templates for bugs, features, and formal verification
+- RFC process established with template
+- GitHub CLI helper scripts created
+- All 14 code blocks tangled successfully
+- Note: No actual GitHub repository required for this structure
+
+Files created:
+- 4 workflow files (CI, docs, formal verification, release)
+- 3 issue templates
+- RFC process with template
+- 3 helper scripts
+- Pull request template
