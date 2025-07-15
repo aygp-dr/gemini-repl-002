@@ -1,0 +1,541 @@
+#+TITLE: GITHUB-SETUP.org - GitHub Integration
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+#+PROPERTY: header-args :mkdirp yes
+
+* GitHub Integration Setup
+
+This file creates GitHub-specific infrastructure for CI/CD, issue templates, and workflows. Note: This creates the structure but doesn't require an actual GitHub repository.
+
+** GitHub Workflows
+
+Create CI/CD workflows for automated testing and verification:
+
+*** Main CI Workflow
+
+#+BEGIN_SRC yaml :tangle .github/workflows/ci.yml :mkdirp yes
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linter
+      run: npm run lint || true
+
+    - name: Build application
+      run: npm run build
+
+    - name: Run tests
+      run: npm test
+#+END_SRC
+
+*** Formal Verification Workflow
+
+#+BEGIN_SRC yaml :tangle .github/workflows/formal-verification.yml :mkdirp yes
+name: Formal Verification
+
+on:
+  push:
+    paths:
+      - 'specs/**'
+  pull_request:
+    paths:
+      - 'specs/**'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Download TLA+ tools
+      run: |
+        mkdir -p tools/formal-methods
+        wget -O tools/formal-methods/tla2tools.jar https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+
+    - name: Download Alloy
+      run: |
+        wget -O tools/formal-methods/alloy.jar https://github.com/AlloyTools/org.alloytools.alloy/releases/download/v6.1.0/alloy.jar
+
+    - name: Run TLA+ verification
+      run: |
+        cd specs
+        make check-tla || true
+
+    - name: Run Alloy verification
+      run: |
+        cd specs
+        make check-alloy || true
+#+END_SRC
+
+*** Release Workflow
+
+#+BEGIN_SRC yaml :tangle .github/workflows/release.yml :mkdirp yes
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build release
+      run: npm run build
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          Changes in this Release
+          - First Change
+          - Second Change
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/main.js
+        asset_name: gemini-repl.js
+        asset_content_type: application/javascript
+#+END_SRC
+
+*** Documentation Workflow
+
+#+BEGIN_SRC yaml :tangle .github/workflows/docs.yml :mkdirp yes
+name: Documentation
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - '**.md'
+      - '**.org'
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check markdown files
+      uses: DavidAnson/markdownlint-cli2-action@v11
+      with:
+        globs: '**/*.md'
+
+    - name: Check for broken links
+      uses: lycheeverse/lychee-action@v1
+      with:
+        args: --verbose --no-progress './**/*.md' './**/*.org'
+        fail: false
+#+END_SRC
+
+** Issue Templates
+
+Create templates for consistent issue reporting:
+
+*** Bug Report Template
+
+#+BEGIN_SRC markdown :tangle .github/ISSUE_TEMPLATE/bug_report.md :mkdirp yes
+---
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: bug
+assignees: ''
+
+---
+
+**Describe the bug**
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Start REPL with '...'
+2. Type command '....'
+3. See error
+
+**Expected behavior**
+A clear and concise description of what you expected to happen.
+
+**Actual behavior**
+What actually happened.
+
+**Environment:**
+ - OS: [e.g. macOS, Linux, Windows]
+ - Node version: [e.g. 18.0.0]
+ - Gemini REPL version: [e.g. 0.1.0]
+
+**Additional context**
+Add any other context about the problem here.
+
+**Logs**
+If applicable, add logs to help explain your problem.
+#+END_SRC
+
+*** Feature Request Template
+
+#+BEGIN_SRC markdown :tangle .github/ISSUE_TEMPLATE/feature_request.md :mkdirp yes
+---
+name: Feature request
+about: Suggest an idea for this project
+title: ''
+labels: enhancement
+assignees: ''
+
+---
+
+**Is your feature request related to a problem? Please describe.**
+A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
+
+**Describe alternatives you've considered**
+A clear and concise description of any alternative solutions or features you've considered.
+
+**Additional context**
+Add any other context or screenshots about the feature request here.
+
+**Formal specification considerations**
+- Does this require changes to TLA+ specs?
+- Are there new invariants to verify?
+- What properties should be maintained?
+#+END_SRC
+
+*** Formal Verification Issue Template
+
+#+BEGIN_SRC markdown :tangle .github/ISSUE_TEMPLATE/formal_verification.md :mkdirp yes
+---
+name: Formal verification issue
+about: Report issues with formal specifications
+title: ''
+labels: formal-methods
+assignees: ''
+
+---
+
+**Specification affected**
+Which specification file(s) are involved?
+
+**Issue description**
+Describe the verification issue or property violation.
+
+**Model checking output**
+```
+Paste relevant TLA+ or Alloy output here
+```
+
+**Expected properties**
+What properties should hold?
+
+**Actual behavior**
+What properties are violated?
+
+**Proposed fix**
+If you have ideas for fixing the specification.
+#+END_SRC
+
+** Pull Request Template
+
+#+BEGIN_SRC markdown :tangle .github/pull_request_template.md :mkdirp yes
+## Description
+
+Brief description of what this PR does.
+
+## Type of Change
+
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Formal specification update
+
+## Testing
+
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+- [ ] Formal verification passes (if applicable)
+
+## Checklist
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
+- [ ] Any dependent changes have been merged and published in downstream modules
+- [ ] I have updated formal specifications if needed
+
+## Related Issues
+
+Fixes #(issue)
+#+END_SRC
+
+** RFC Process
+
+Create RFC (Request for Comments) structure:
+
+#+BEGIN_SRC markdown :tangle .github/rfcs/RFC-TEMPLATE.md :mkdirp yes
+# RFC-XXX: Title
+
+**Status:** Draft | In Review | Accepted | Rejected
+**Date:** YYYY-MM-DD
+**Author:** Your Name
+
+## Summary
+
+One paragraph explanation of the proposal.
+
+## Motivation
+
+Why are we doing this? What problem does it solve?
+
+## Detailed Design
+
+This is the bulk of the RFC. Explain the design in enough detail for somebody familiar with the project to understand and implement. This should get into specifics and corner-cases.
+
+## Formal Specification Impact
+
+- Which TLA+ specs need updating?
+- Which Alloy models are affected?
+- New properties to verify?
+- Performance implications?
+
+## Drawbacks
+
+Why should we *not* do this?
+
+## Alternatives
+
+What other designs have been considered? What is the impact of not doing this?
+
+## Unresolved Questions
+
+What parts of the design are still undecided?
+
+## Implementation Plan
+
+1. Phase 1: ...
+2. Phase 2: ...
+3. Phase 3: ...
+#+END_SRC
+
+#+BEGIN_SRC markdown :tangle .github/rfcs/README.md :mkdirp yes
+# Gemini REPL RFCs
+
+This directory contains Request for Comments (RFC) documents for proposed changes to the Gemini REPL project.
+
+## RFC Process
+
+1. Copy `RFC-TEMPLATE.md` to `RFC-XXX-short-title.md`
+2. Fill out all sections
+3. Submit as a pull request
+4. Discussion happens in PR comments
+5. RFC is either accepted or rejected
+6. Accepted RFCs are merged and can be implemented
+
+## Active RFCs
+
+- None yet
+
+## Accepted RFCs
+
+- [RFC-001: Formal Specification Validation](RFC-001-formal-validation.md) (example)
+
+## Rejected RFCs
+
+- None yet
+#+END_SRC
+
+** GitHub CLI Scripts
+
+Create helper scripts for GitHub operations:
+
+#+BEGIN_SRC sh :tangle .github/scripts/create-issue.sh :shebang #!/bin/sh :mkdirp yes
+# Create a new issue using GitHub CLI
+set -e
+
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <title> <body> [labels]"
+    exit 1
+fi
+
+TITLE="$1"
+BODY="$2"
+LABELS="${3:-}"
+
+if [ -n "$LABELS" ]; then
+    gh issue create --title "$TITLE" --body "$BODY" --label "$LABELS"
+else
+    gh issue create --title "$TITLE" --body "$BODY"
+fi
+#+END_SRC
+
+#+BEGIN_SRC sh :tangle .github/scripts/run-workflow.sh :shebang #!/bin/sh :mkdirp yes
+# Trigger a workflow manually
+set -e
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <workflow-name>"
+    echo "Available workflows:"
+    gh workflow list
+    exit 1
+fi
+
+WORKFLOW="$1"
+shift
+
+gh workflow run "$WORKFLOW" "$@"
+#+END_SRC
+
+#+BEGIN_SRC sh :tangle .github/scripts/check-pr.sh :shebang #!/bin/sh :mkdirp yes
+# Check PR status
+set -e
+
+# Get current branch
+BRANCH=$(git branch --show-current)
+
+# Check if PR exists for branch
+PR_NUMBER=$(gh pr list --head "$BRANCH" --json number -q '.[0].number' || echo "")
+
+if [ -z "$PR_NUMBER" ]; then
+    echo "No PR found for branch: $BRANCH"
+    echo "Create one with: gh pr create"
+else
+    echo "PR #$PR_NUMBER status:"
+    gh pr view "$PR_NUMBER"
+fi
+#+END_SRC
+
+** GitHub Command for Claude
+
+#+BEGIN_SRC markdown :tangle .claude/commands/github.md :mkdirp yes
+# GitHub Integration Command
+
+Extended helpers for GitHub workflows and CI/CD.
+
+## Quick Commands
+
+### Issues
+```bash
+# Create issue
+.github/scripts/create-issue.sh "Title" "Description" "bug,help-wanted"
+
+# List issues
+gh issue list
+
+# View issue
+gh issue view <number>
+```
+
+### Pull Requests
+```bash
+# Create PR
+gh pr create --fill
+
+# Check PR CI status
+gh pr checks
+
+# View PR
+.github/scripts/check-pr.sh
+```
+
+### Workflows
+```bash
+# Run formal verification
+.github/scripts/run-workflow.sh formal-verification.yml
+
+# View workflow runs
+gh run list
+
+# Watch current run
+gh run watch
+```
+
+## Labels to Use
+
+- `bug` - Something isn't working
+- `enhancement` - New feature request
+- `documentation` - Documentation improvements
+- `formal-methods` - Related to TLA+/Alloy specs
+- `clojurescript` - Implementation related
+- `good-first-issue` - Good for newcomers
+- `help-wanted` - Extra attention needed
+
+## Workflow Tips
+
+1. Always create issues before PRs
+2. Reference issues in PR descriptions
+3. Wait for CI to pass before merging
+4. Use draft PRs for work in progress
+5. Request reviews from relevant people
+#+END_SRC
+
+* Extraction Instructions
+
+To extract all files from this document:
+1. Run `emacs --batch -l org GITHUB-SETUP.org -f org-babel-tangle`
+2. Make scripts executable: `chmod +x .github/scripts/*.sh`
+3. Note: No GitHub repository required for this structure
+4. Remove this file after successful extraction
+#+END_SRC

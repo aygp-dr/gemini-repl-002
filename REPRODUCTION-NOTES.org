@@ -31,11 +31,13 @@ This document tracks learnings, sequencing issues, and improvements discovered d
 - Created 8 Claude commands and workflow templates successfully
 
 * Phase 4: NODE-SETUP.org Development Environment
-**Status**: ⏳ Pending
-**Expected**:
-- Creates package.json with Shadow-CLJS dependencies
-- Creates shadow-cljs.edn configuration
-- Implements initial ClojureScript REPL in src/gemini_repl/core.cljs
+**Status**: ✅ Completed
+**Key Learnings**:
+- Successfully tangled all 8 code blocks
+- Massive trailing whitespace cleanup needed (ClojureScript formatting)
+- FreeBSD sed requires -i '' (not just -i)
+- Created full REPL implementation with all features
+- Pre-commit hook very strict about trailing newlines!
 
 * Sequencing Issues Discovered
 
@@ -68,6 +70,14 @@ This document tracks learnings, sequencing issues, and improvements discovered d
 - Claude commands
 - Formal verification tools
 
+* Time and Progress Tracking
+
+- Started: ~21:35 EDT
+- Phase 4 complete: 22:21 EDT
+- Time elapsed: ~46 minutes for 4/17 phases (24%)
+- Estimated total: ~3.2 hours at current pace
+- No GitHub repo created (all local git)
+
 * Improvements for Next Reproduction
 
 1. Consider consolidating SETUP.org files into one comprehensive setup
@@ -75,6 +85,11 @@ This document tracks learnings, sequencing issues, and improvements discovered d
 3. Add explicit gmake usage in all Makefiles for BSD compatibility
 4. Create a bootstrap script that checks prerequisites
 5. Add phase verification commands at end of each phase
+6. Pre-add trailing newlines to all org-mode source blocks
+7. Run whitespace cleanup as part of tangling process
+8. Consider single MEGA-SETUP.org instead of 5 separate files
+9. Add platform detection for make vs gmake
+10. Ship a pre-commit hook that's less aggressive about whitespace
 
 * Clarifications for Future Reproductions
 

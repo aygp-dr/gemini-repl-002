@@ -1,34 +1,59 @@
 # GitHub Integration Command
 
-Helpers for GitHub workflows and CI/CD.
+Extended helpers for GitHub workflows and CI/CD.
 
-## Available Actions
+## Quick Commands
 
-### Create Issue
+### Issues
 ```bash
-gh issue create --title "Title" --body "Description"
+# Create issue
+.github/scripts/create-issue.sh "Title" "Description" "bug,help-wanted"
+
+# List issues
+gh issue list
+
+# View issue
+gh issue view <number>
 ```
 
-### Create PR
+### Pull Requests
 ```bash
-gh pr create --title "Title" --body "Description"
+# Create PR
+gh pr create --fill
+
+# Check PR CI status
+gh pr checks
+
+# View PR
+.github/scripts/check-pr.sh
 ```
 
-### Run Workflow
+### Workflows
 ```bash
-gh workflow run formal-verification.yml
+# Run formal verification
+.github/scripts/run-workflow.sh formal-verification.yml
+
+# View workflow runs
+gh run list
+
+# Watch current run
+gh run watch
 ```
 
-## CI/CD Triggers
-
-- Push to main: Run all tests
-- PR opened: Run linting and tests
-- Tag created: Build release
-- Manual: Formal verification
-
-## Labels
+## Labels to Use
 
 - `bug` - Something isn't working
-- `enhancement` - New feature
-- `formal-methods` - Related to TLA+/Alloy
+- `enhancement` - New feature request
+- `documentation` - Documentation improvements
+- `formal-methods` - Related to TLA+/Alloy specs
 - `clojurescript` - Implementation related
+- `good-first-issue` - Good for newcomers
+- `help-wanted` - Extra attention needed
+
+## Workflow Tips
+
+1. Always create issues before PRs
+2. Reference issues in PR descriptions
+3. Wait for CI to pass before merging
+4. Use draft PRs for work in progress
+5. Request reviews from relevant people
