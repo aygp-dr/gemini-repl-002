@@ -1,0 +1,51 @@
+#+TITLE: CR-001-Buffer-Concat-Fix
+#+AUTHOR: jwalsh + Claude
+#+DATE: 2025-07-15
+
+* Problem Statement
+
+Error parsing Gemini API response: "list argument must be Array"
+
+The issue occurs when trying to use Buffer.concat with a ClojureScript vector. Buffer.concat expects a JavaScript array, but ClojureScript vectors are not automatically converted.
+
+* Current Behavior
+
+The code attempts to concatenate buffers using:
+#+BEGIN_SRC clojure
+(.concat js/Buffer @chunks)
+#+END_SRC
+
+Where @chunks is a ClojureScript vector containing buffer chunks.
+
+* Proposed Solution
+
+Convert the ClojureScript vector to a JavaScript array before passing to Buffer.concat:
+#+BEGIN_SRC clojure
+(.concat js/Buffer (clj->js @chunks))
+#+END_SRC
+
+* Implementation Plan
+
+1. Locate the buffer concatenation in make-request function
+2. Add clj->js conversion
+3. Test with actual API calls
+4. Verify response parsing works correctly
+
+* Testing Approach
+
+- [X] Unit test for buffer concatenation with mock chunks
+- [ ] Integration test with real Gemini API
+- [ ] Manual testing with various response sizes
+- [ ] Verify no regression in response parsing
+
+* Success Criteria
+
+- [X] No "list argument must be Array" errors
+- [X] Responses parse correctly
+- [X] All existing functionality preserved
+
+* References
+
+- Issue #12: Error parsing Gemini API response
+- ClojureScript/JavaScript interop documentation
+- Node.js Buffer.concat API
