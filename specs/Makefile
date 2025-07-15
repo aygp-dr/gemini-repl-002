@@ -1,4 +1,5 @@
 # Makefile for formal specifications
+# Note: Use gmake on BSD systems
 .PHONY: all check-tla check-alloy clean
 
 all: check-tla check-alloy

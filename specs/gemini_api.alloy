@@ -1,0 +1,108 @@
+// API structure validation for Gemini REPL
+
+sig APIEndpoint {
+    model: one Model,
+    status: one Status,
+    rateLimit: one Int
+}
+
+sig Model {
+    name: one String,
+    maxTokens: one Int,
+    costPerToken: one Int
+}
+
+abstract sig Status {}
+one sig Available extends Status {}
+one sig Busy extends Status {}
+one sig RateLimited extends Status {}
+one sig Maintenance extends Status {}
+
+sig APIRequest {
+    endpoint: one APIEndpoint,
+    messages: seq Message,
+    temperature: one Int,
+    maxOutputTokens: one Int
+}
+
+sig APIResponse {
+    request: one APIRequest,
+    content: one String,
+    tokenCount: one Int,
+    finishReason: one FinishReason
+}
+
+sig Message {
+    role: one String,
+    parts: set Part
+}
+
+sig Part {
+    text: one String
+}
+
+abstract sig FinishReason {}
+one sig Stop extends FinishReason {}
+one sig MaxTokens extends FinishReason {}
+one sig Safety extends FinishReason {}
+one sig Error extends FinishReason {}
+
+sig String {}
+
+// Facts
+fact EndpointConstraints {
+    // Rate limits are non-negative
+    all e: APIEndpoint | e.rateLimit >= 0
+
+    // Model token limits are positive
+    all m: Model | m.maxTokens > 0 and m.costPerToken >= 0
+}
+
+fact RequestConstraints {
+    // Temperature is between 0 and 100 (representing 0.0 to 1.0)
+    all r: APIRequest | r.temperature >= 0 and r.temperature <= 100
+
+    // Max output tokens doesn't exceed model limit
+    all r: APIRequest | r.maxOutputTokens <= r.endpoint.model.maxTokens
+}
+
+fact ResponseConstraints {
+    // Token count doesn't exceed request limit
+    all r: APIResponse | r.tokenCount <= r.request.maxOutputTokens
+
+    // Error responses have no content
+    all r: APIResponse | r.finishReason = Error implies r.tokenCount = 0
+}
+
+// Predicates
+pred validRequest[r: APIRequest] {
+    r.endpoint.status = Available
+    #r.messages > 0
+}
+
+pred successfulResponse[r: APIResponse] {
+    r.finishReason = Stop
+    r.tokenCount > 0
+}
+
+pred rateLimitExceeded[e: APIEndpoint] {
+    e.status = RateLimited
+}
+
+// Assertions
+assert RequestResponseMatching {
+    // Every response has a valid request
+    all resp: APIResponse | validRequest[resp.request]
+}
+
+assert TokenLimitsRespected {
+    // Responses never exceed model token limits
+    all r: APIResponse |
+        r.tokenCount <= r.request.endpoint.model.maxTokens
+}
+
+// Run commands
+run validRequest for 5
+run successfulResponse for 5
+check RequestResponseMatching for 10
+check TokenLimitsRespected for 10

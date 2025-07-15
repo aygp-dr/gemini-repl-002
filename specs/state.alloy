@@ -1,0 +1,78 @@
+// System state model for Gemini REPL
+
+sig User {
+    requests: set Request,
+    history: seq Message
+}
+
+sig Request {
+    prompt: one String,
+    timestamp: one Time,
+    response: lone Response
+}
+
+sig Response {
+    content: one String,
+    tokens: one Int,
+    success: one Bool
+}
+
+sig Message {
+    role: one Role,
+    text: one String
+}
+
+abstract sig Role {}
+one sig UserRole extends Role {}
+one sig ModelRole extends Role {}
+
+sig Time {}
+
+abstract sig Bool {}
+one sig True extends Bool {}
+one sig False extends Bool {}
+
+sig String {}
+
+// Facts (constraints)
+fact RequestResponsePairing {
+    // Every response belongs to exactly one request
+    all r: Response | one req: Request | req.response = r
+}
+
+fact HistoryOrdering {
+    // Messages in history are ordered
+    all u: User | all i: u.history.inds |
+        i > 0 implies u.history[i].@role != u.history[Int.sub[i,1]].@role
+}
+
+fact TokenConstraints {
+    // Token counts are positive
+    all r: Response | r.tokens > 0
+}
+
+// Predicates
+pred validConversation[u: User] {
+    // Conversation starts with user message
+    #u.history > 0 implies u.history[0].@role = UserRole
+}
+
+pred requestSucceeded[r: Request] {
+    some r.response and r.response.success = True
+}
+
+// Assertions
+assert NoOrphanResponses {
+    // All responses are linked to requests
+    all r: Response | some req: Request | req.response = r
+}
+
+assert ConversationIntegrity {
+    // All users have valid conversations
+    all u: User | validConversation[u]
+}
+
+// Run commands
+run validConversation for 5
+check NoOrphanResponses for 10
+check ConversationIntegrity for 10
