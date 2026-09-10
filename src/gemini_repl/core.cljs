@@ -3,7 +3,9 @@
             ["fs" :as fs]
             ["path" :as path]
             ["readline" :as readline]
-            ["https" :as https]))
+            ["https" :as https]
+            [clojure.spec.alpha :as s]
+            [gemini-repl.specs :as specs]))
 
 ;; State management
 (def conversation-history (atom []))
@@ -30,6 +32,10 @@
         ;; Silently ignore FIFO errors
         nil))))
 
+(s/fdef log-to-fifo
+  :args (s/cat :entry ::specs/log-entry)
+  :ret nil?)
+
 (defn log-to-file [entry]
   (when (:log-enabled config)
     (let [log-dir (path/dirname (:log-file config))]
@@ -38,12 +44,20 @@
       (fs/appendFileSync (:log-file config)
                          (str (.stringify js/JSON (clj->js entry)) "\n")))))
 
+(s/fdef log-to-file
+  :args (s/cat :entry ::specs/log-entry)
+  :ret nil?)
+
 (defn log-entry [type data]
   (let [entry {:timestamp (.toISOString (js/Date.))
                :type type
                :data data}]
     (log-to-fifo entry)
     (log-to-file entry)))
+
+(s/fdef log-entry
+  :args (s/cat :type ::specs/log-type :data ::specs/log-data)
+  :ret nil?)
 
 ;; Display banner
 (defn display-banner []
@@ -57,6 +71,10 @@
   (println "Type /help for commands or your message to chat")
   (println))
 
+(s/fdef display-banner
+  :args (s/cat)
+  :ret nil?)
+
 ;; Format response metadata
 (defn format-metadata [response-data duration-ms]
   (let [tokens (or (get-in response-data [:usageMetadata :totalTokenCount]) 0)
@@ -69,6 +87,18 @@
                      (< tokens 500) "🟡"
                      :else "🔴")]
     (str "[" confidence " " tokens " tokens | $" (.toFixed cost 4) " | " duration "]")))
+
+(s/fdef format-metadata
+  :args (s/cat :response-data ::specs/response-data :duration-ms ::specs/duration-ms)
+  :ret ::specs/metadata-line
+  ;; shows the response's token count (0 when absent), and the duration in
+  ;; ms under one second, in seconds otherwise
+  :fn (fn [{{:keys [response-data duration-ms]} :args ret :ret}]
+        (let [tokens (or (get-in response-data [:usageMetadata :totalTokenCount]) 0)]
+          (and (str/includes? ret (str " " tokens " tokens "))
+               (if (< duration-ms 1000)
+                 (str/ends-with? ret (str " " duration-ms "ms]"))
+                 (boolean (re-find #" \d+\.\ds\]$" ret)))))))
 
 ;; API request handling
 (defn make-request [prompt callback]
@@ -125,6 +155,10 @@
         (.write req data)
         (.end req)))))
 
+(s/fdef make-request
+  :args (s/cat :prompt string? :callback fn?)
+  :ret some?)
+
 ;; Command handlers
 (defn handle-help []
   (println "\nAvailable commands:")
@@ -136,11 +170,19 @@
   (println "  /debug   - Toggle debug logging")
   (println "\nType anything else to chat with Gemini"))
 
+(s/fdef handle-help
+  :args (s/cat)
+  :ret nil?)
+
 (defn handle-stats []
   (println "\nUsage Statistics:")
   (println (str "  Total requests: " (:request-count @stats)))
   (println (str "  Total tokens: " (:total-tokens @stats)))
   (println (str "  Estimated cost: $" (.toFixed (:total-cost @stats) 4))))
+
+(s/fdef handle-stats
+  :args (s/cat)
+  :ret nil?)
 
 (defn handle-context []
   (println "\nConversation History:")
@@ -149,14 +191,26 @@
                   (-> msg :parts first :text (subs 0 (min 50 (count (-> msg :parts first :text)))))
                   (when (> (count (-> msg :parts first :text)) 50) "...")))))
 
+(s/fdef handle-context
+  :args (s/cat)
+  :ret nil?)
+
 (defn handle-debug []
   (let [new-state (not (:log-enabled config))]
     (set! config (assoc config :log-enabled new-state))
     (println (str "\nDebug logging " (if new-state "enabled" "disabled")))))
 
+(s/fdef handle-debug
+  :args (s/cat)
+  :ret nil?)
+
 (defn handle-clear []
   (reset! conversation-history [])
   (println "\nConversation history cleared"))
+
+(s/fdef handle-clear
+  :args (s/cat)
+  :ret nil?)
 
 ;; Main REPL loop
 (defn process-input [input rl]
@@ -180,6 +234,11 @@
                       (println)
                       (.prompt rl))))))
 
+(s/fdef process-input
+  :args (s/cat :input ::specs/input :rl some?)
+  ;; returns whatever readline/https returned; nothing to promise
+  :ret any?)
+
 (defn main []
   (display-banner)
 
@@ -198,6 +257,10 @@
     (.on rl "close" (fn []
                       (println "\nGoodbye!")
                       (.exit js/process 0)))))
+
+(s/fdef main
+  :args (s/cat)
+  :ret any?)
 
 ;; Enable main function call
 (set! *main-cli-fn* main)
