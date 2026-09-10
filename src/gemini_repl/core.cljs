@@ -83,7 +83,7 @@
                    (str duration-ms "ms")
                    (str (.toFixed (/ duration-ms 1000) 1) "s"))
         confidence (cond
-                     (< tokens 100) "🟢"
+                     (<= tokens 100) "🟢"
                      (< tokens 500) "🟡"
                      :else "🔴")]
     (str "[" confidence " " tokens " tokens | $" (.toFixed cost 4) " | " duration "]")))
