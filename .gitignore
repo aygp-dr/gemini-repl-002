@@ -1,3 +1,14 @@
 .env
 logs/*.log
 logs/*.json
+# clojure standard v1
+.cpcache/
+.clj-kondo/.cache/
+.lsp/
+.nrepl-port
+.rebel_readline_history
+target/
+# cljs
+node_modules/
+.shadow-cljs/
+out/

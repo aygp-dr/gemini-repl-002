@@ -1,7 +1,5 @@
-{:source-paths ["src"]
-
- :dependencies [[org.clojure/clojurescript "1.11.121"]
-                [com.cognitect/transit-cljs "0.8.280"]]
+;; Classpath and dependencies come from deps.edn (:cljs + :dev aliases).
+{:deps {:aliases [:cljs :dev]}
 
  :builds
  {:app
