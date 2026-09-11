@@ -38,14 +38,10 @@ run: build
 	node target/main.js
 
 test:
-	npx shadow-cljs compile test && node target/test.js
+	bb test
 
 lint:
-	@if command -v clj-kondo >/dev/null 2>&1; then \
-		npx clj-kondo --lint src test; \
-	else \
-		echo "clj-kondo not installed, skipping lint"; \
-	fi
+	bb lint
 
 clean:
 	rm -rf target .shadow-cljs node_modules
